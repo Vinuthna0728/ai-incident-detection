@@ -22,11 +22,13 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://127.0.0.1:8000/incidents", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const BASE_URL = import.meta.env.VITE_API_URL;
+
+const res = await fetch(`${BASE_URL}/incidents`, {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
       const data = await res.json();
       setIncidents(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -50,7 +52,7 @@ export default function Dashboard() {
       return;
     }
 
-    const WS_URL = import.meta.env.VITE_API_URL.replace("https", "wss");
+    const WS_URL = import.meta.env.VITE_API_URL.replace(/^http/, "ws");
 
 const socket = new WebSocket(`${WS_URL}/ws?token=${token}`);
 
