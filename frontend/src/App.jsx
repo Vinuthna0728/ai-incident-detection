@@ -1,20 +1,21 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Dashboard from "./pages/Dashboard.jsx";
-import Login from "./pages/Login.jsx";
-import { Toaster } from "react-hot-toast";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
 
-function App() {
+export default function App() {
+  const token = localStorage.getItem("token");
+
   return (
-    <BrowserRouter>
-      <Toaster position="top-right" />
+    <Routes>
+      {/* Login */}
+      <Route path="/login" element={<Login />} />
 
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Dashboard />} />
-      </Routes>
-    </BrowserRouter>
+      {/* Dashboard (protected) */}
+      <Route
+        path="/"
+        element={token ? <Dashboard /> : <Navigate to="/login" />}
+      />
+    </Routes>
   );
 }
-
-export default App;
 
