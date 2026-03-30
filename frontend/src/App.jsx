@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard.jsx";
-import Login from "./pages/Login.jsx";  // ✅ FIXED
+import Login from "./pages/Login.jsx";
 import { Toaster } from "react-hot-toast";
 
 function App() {
@@ -17,3 +17,4 @@ function App() {
 }
 
 export default App;
+
