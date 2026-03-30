@@ -1,16 +1,19 @@
 import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
 import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
-    <>
-      {/* 🔔 Toast Container */}
-      <Toaster position="top-right" reverseOrder={false} />
+    <Router>
+      <Toaster position="top-right" />
 
-      {/* Main Dashboard */}
-      <Dashboard />
-    </>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Dashboard />} />
+      </Routes>
+    </Router>
   );
 }
 
