@@ -5,3 +5,5 @@ pymysql
 python-jose
 passlib[bcrypt]
 python-dotenv
+websockets
+numpy
