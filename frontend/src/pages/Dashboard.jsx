@@ -50,7 +50,9 @@ export default function Dashboard() {
       return;
     }
 
-    socket = new WebSocket(`ws://127.0.0.1:8000/ws?token=${token}`);
+    const WS_URL = import.meta.env.VITE_API_URL.replace("https", "wss");
+
+const socket = new WebSocket(`${WS_URL}/ws?token=${token}`);
 
     socket.onopen = () => {
       console.log("✅ WebSocket Connected");
@@ -163,20 +165,13 @@ export default function Dashboard() {
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
       `}</style>
 
-      {/* --- SIDEBAR NAVIGATION --- */}
-      <aside style={sidebar}>
-        <div style={logoSection}>
-          <div style={logoGlow}></div>
-          <h2 style={logoText}>AI Ops</h2>
-        </div>
-        <nav style={navMenu}>
-          <div style={navItemActive}>📊 Dashboard</div>
-          <div style={navItem}>🚨 Incidents</div>
-          <div style={navItem}>📈 Analytics</div>
-          <div style={navItem}>⚙ Settings</div>
-        </nav>
-      </aside>
-
+        <aside style={sidebar}>
+  ...
+  <div style={navItemActive}>📊 Dashboard</div>
+  <div style={navItem}>🚨 Incidents</div>
+  <div style={navItem}>📈 Analytics</div>
+  <div style={navItem}>⚙ Settings</div>
+</aside>
       {/* --- MAIN DASHBOARD AREA --- */}
       <main style={mainContent}>
         {/* TOP HEADER */}

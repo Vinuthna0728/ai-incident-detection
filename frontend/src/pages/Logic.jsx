@@ -5,8 +5,10 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  const BASE_URL = import.meta.env.VITE_API_URL;
+
   const login = async () => {
-    const res = await axios.post("http://127.0.0.1:8000/login", {
+    const res = await axios.post(`${BASE_URL}/login`, {
       username,
       password,
     });
