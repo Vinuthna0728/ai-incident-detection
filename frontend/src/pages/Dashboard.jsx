@@ -17,6 +17,7 @@ export default function Dashboard() {
 
   const [isAuth, setIsAuth] = useState(!!localStorage.getItem("token"));
   const [isLogin, setIsLogin] = useState(true);
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -24,91 +25,45 @@ export default function Dashboard() {
 
   const BASE_URL = import.meta.env.VITE_API_URL;
 
-  /* ================= AUTH UI ================= */
-  if (!isAuth) {
-    return (
-      <div style={authStyles.container}>
-        <div style={authStyles.card}>
-          <h2>{isLogin ? "Login" : "Register"}</h2>
+  /* ================= AUTH ================= */
+  const handleAuth = async () => {
+    try {
+      const url = isLogin ? "/login" : "/register";
 
-          <input
-            placeholder="Username"
-            onChange={(e) => setUsername(e.target.value)}
-          />
+      const res = await fetch(`${BASE_URL}${url}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-          <input
-            type="password"
-            placeholder="Password"
-            onChange={(e) => setPassword(e.target.value)}
-          />
+      const data = await res.json();
 
-          <button
-            onClick={async () => {
-              try {
-                const url = isLogin ? "/login" : "/register";
+      if (isLogin) {
+        if (!data.access_token) {
+          toast.error("Login failed");
+          return;
+        }
 
-                const res = await fetch(`${BASE_URL}${url}`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({ username, password }),
-                });
+        localStorage.setItem("token", data.access_token);
+        setIsAuth(true);
+        fetchData();
+        connectWebSocket();
+      } else {
+        toast.success("Registered! Now login");
+        setIsLogin(true);
+      }
+    } catch {
+      toast.error("Error");
+    }
+  };
 
-                const data = await res.json();
-
-                if (isLogin) {
-                  if (!data.access_token) {
-                    alert("Login failed");
-                    return;
-                  }
-
-                  localStorage.setItem("token", data.access_token);
-                  setIsAuth(true);
-                } else {
-                  alert("Registered! Now login");
-                  setIsLogin(true);
-                }
-              } catch {
-                alert("Error");
-              }
-            }}
-          >
-            {isLogin ? "Login" : "Register"}
-          </button>
-
-          {/* DEMO BUTTON */}
-          <button
-            onClick={() => {
-              setUsername("admin");
-              setPassword("admin123");
-            }}
-          >
-            Use Demo Account
-          </button>
-
-          <p onClick={() => setIsLogin(!isLogin)} style={{ cursor: "pointer" }}>
-            {isLogin ? "Create account" : "Already have account?"}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  /* ================= DASHBOARD ================= */
-
-  useEffect(() => {
-    fetchData();
-    connectWebSocket();
-
-    return () => {
-      if (socketRef.current) socketRef.current.close();
-    };
-  }, []);
-
+  /* ================= FETCH ================= */
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) return;
 
       const res = await fetch(`${BASE_URL}/incidents`, {
         headers: {
@@ -123,8 +78,11 @@ export default function Dashboard() {
     }
   };
 
+  /* ================= WS ================= */
   const connectWebSocket = () => {
     const token = localStorage.getItem("token");
+    if (!token) return;
+
     const WS_URL = BASE_URL.replace(/^http/, "ws");
 
     socketRef.current = new WebSocket(`${WS_URL}/ws?token=${token}`);
@@ -145,12 +103,16 @@ export default function Dashboard() {
         });
       }
     };
-
-    socketRef.current.onclose = () => {
-      setTimeout(connectWebSocket, 2000);
-    };
   };
 
+  useEffect(() => {
+    if (isAuth) {
+      fetchData();
+      connectWebSocket();
+    }
+  }, [isAuth]);
+
+  /* ================= DATA ================= */
   const total = incidents.length;
   const high = incidents.filter((i) => i?.severity === "HIGH").length;
 
@@ -164,27 +126,64 @@ export default function Dashboard() {
     { name: "High", value: high, color: "#f43f5e" },
   ];
 
+  /* ================= UI ================= */
   return (
     <div style={layout}>
+      {/* SIDEBAR */}
       <aside style={sidebar}>
         <h2>AI Ops</h2>
         <div>📊 Dashboard</div>
         <div>🚨 Incidents</div>
         <div>📈 Analytics</div>
-
-        <button
-          onClick={() => {
-            localStorage.removeItem("token");
-            window.location.reload();
-          }}
-        >
-          Logout
-        </button>
       </aside>
 
       <main style={main}>
-        <h1>System Intelligence</h1>
+        {/* TOP BAR */}
+        <div style={topBar}>
+          <h1>System Intelligence</h1>
 
+          {!isAuth ? (
+            <div style={authBox}>
+              <input
+                placeholder="user"
+                onChange={(e) => setUsername(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="pass"
+                onChange={(e) => setPassword(e.target.value)}
+              />
+
+              <button onClick={handleAuth}>
+                {isLogin ? "Login" : "Register"}
+              </button>
+
+              <button onClick={() => setIsLogin(!isLogin)}>
+                {isLogin ? "Register" : "Login"}
+              </button>
+
+              <button
+                onClick={() => {
+                  setUsername("admin");
+                  setPassword("admin123");
+                }}
+              >
+                Demo
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                localStorage.removeItem("token");
+                window.location.reload();
+              }}
+            >
+              Logout
+            </button>
+          )}
+        </div>
+
+        {/* STATS */}
         <div style={{ display: "flex", gap: 20 }}>
           <div style={card}>
             <p>Active</p>
@@ -196,6 +195,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* INCIDENT TABLE */}
         <div style={card}>
           <h3>Incident Log</h3>
           {incidents.map((i) => (
@@ -205,8 +205,9 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* CHART */}
         <div style={card}>
-          <h3>Stats</h3>
+          <h3>Traffic Distribution</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -221,8 +222,10 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
+        {/* ALERTS */}
         <div style={card}>
           <h3>Alerts</h3>
+
           <select onChange={(e) => setFilter(e.target.value)}>
             <option value="ALL">All</option>
             <option value="HIGH">High</option>
@@ -237,7 +240,7 @@ export default function Dashboard() {
   );
 }
 
-/* ---------- STYLES ---------- */
+/* ================= STYLES ================= */
 const layout = {
   display: "flex",
   minHeight: "100vh",
@@ -263,22 +266,13 @@ const card = {
   borderRadius: 10,
 };
 
-const authStyles = {
-  container: {
-    height: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "#020617",
-    color: "white",
-  },
-  card: {
-    background: "#111827",
-    padding: 30,
-    borderRadius: 10,
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-    width: 300,
-  },
+const topBar = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+};
+
+const authBox = {
+  display: "flex",
+  gap: 8,
 };
