@@ -27,7 +27,7 @@ A full-stack web application for real-time system monitoring, anomaly detection,
 ---
 ## 🌍 Live Demo
 * 🔗 Backend API: https://ai-incident-detection.onrender.com
-* 🔗 Frontend: (Add your Vercel link here)
+* 🔗 Frontend: https://ai-incident-detection.vercel.app/
 ---
 ## ⚙️ Local Setup
 ### 1. Clone the repository
