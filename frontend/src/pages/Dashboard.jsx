@@ -15,19 +15,89 @@ export default function Dashboard() {
   const [alerts, setAlerts] = useState([]);
   const [filter, setFilter] = useState("ALL");
 
+  const [isAuth, setIsAuth] = useState(!!localStorage.getItem("token"));
+  const [isLogin, setIsLogin] = useState(true);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
   const socketRef = useRef(null);
 
   const BASE_URL = import.meta.env.VITE_API_URL;
 
-  /* ---------------- AUTH + INIT ---------------- */
+  /* ================= AUTH UI ================= */
+  if (!isAuth) {
+    return (
+      <div style={authStyles.container}>
+        <div style={authStyles.card}>
+          <h2>{isLogin ? "Login" : "Register"}</h2>
+
+          <input
+            placeholder="Username"
+            onChange={(e) => setUsername(e.target.value)}
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button
+            onClick={async () => {
+              try {
+                const url = isLogin ? "/login" : "/register";
+
+                const res = await fetch(`${BASE_URL}${url}`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ username, password }),
+                });
+
+                const data = await res.json();
+
+                if (isLogin) {
+                  if (!data.access_token) {
+                    alert("Login failed");
+                    return;
+                  }
+
+                  localStorage.setItem("token", data.access_token);
+                  setIsAuth(true);
+                } else {
+                  alert("Registered! Now login");
+                  setIsLogin(true);
+                }
+              } catch {
+                alert("Error");
+              }
+            }}
+          >
+            {isLogin ? "Login" : "Register"}
+          </button>
+
+          {/* DEMO BUTTON */}
+          <button
+            onClick={() => {
+              setUsername("admin");
+              setPassword("admin123");
+            }}
+          >
+            Use Demo Account
+          </button>
+
+          <p onClick={() => setIsLogin(!isLogin)} style={{ cursor: "pointer" }}>
+            {isLogin ? "Create account" : "Already have account?"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ================= DASHBOARD ================= */
+
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      window.location.href = "/login";
-      return;
-    }
-
     fetchData();
     connectWebSocket();
 
@@ -36,7 +106,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  /* ---------------- FETCH DATA ---------------- */
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -50,68 +119,38 @@ export default function Dashboard() {
       const data = await res.json();
       setIncidents(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Fetch error:", err);
+      console.error(err);
     }
   };
 
-  /* ---------------- WEBSOCKET ---------------- */
   const connectWebSocket = () => {
     const token = localStorage.getItem("token");
-
     const WS_URL = BASE_URL.replace(/^http/, "ws");
 
     socketRef.current = new WebSocket(`${WS_URL}/ws?token=${token}`);
 
-    socketRef.current.onopen = () => {
-      console.log("✅ WS Connected");
-    };
-
     socketRef.current.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
+      const msg = JSON.parse(event.data);
 
-        if (msg.type === "ALERT") {
-          const alert = msg.data;
+      if (msg.type === "ALERT") {
+        const alert = msg.data;
 
-          // 🔔 Toast
-          toast.custom(
-            () => (
-              <div className="bg-[#0f172a] text-white px-4 py-3 rounded-xl border border-red-500 w-80">
-                <b style={{ color: "#f43f5e" }}>{alert.severity}</b>
-                <div>{alert.root_cause}</div>
-                <small>{alert.suggestion}</small>
-              </div>
-            ),
-            { duration: 4000 }
-          );
+        toast.success(`${alert.severity}: ${alert.root_cause}`);
 
-          // Update alerts
-          setAlerts((prev) => [alert, ...prev]);
+        setAlerts((prev) => [alert, ...prev]);
 
-          // Update incidents
-          setIncidents((prev) => {
-            if (prev.find((i) => i.id === alert.id)) return prev;
-            return [alert, ...prev];
-          });
-
-          // 🔊 Sound
-          if (alert.severity === "HIGH") {
-            const audio = new Audio("/alert.mp3");
-            audio.play().catch(() => {});
-          }
-        }
-      } catch (err) {
-        console.error("WS error:", err);
+        setIncidents((prev) => {
+          if (prev.find((i) => i.id === alert.id)) return prev;
+          return [alert, ...prev];
+        });
       }
     };
 
     socketRef.current.onclose = () => {
-      console.log("❌ WS reconnecting...");
       setTimeout(connectWebSocket, 2000);
     };
   };
 
-  /* ---------------- COMPUTED ---------------- */
   const total = incidents.length;
   const high = incidents.filter((i) => i?.severity === "HIGH").length;
 
@@ -125,7 +164,6 @@ export default function Dashboard() {
     { name: "High", value: high, color: "#f43f5e" },
   ];
 
-  /* ---------------- UI ---------------- */
   return (
     <div style={layout}>
       <aside style={sidebar}>
@@ -133,12 +171,20 @@ export default function Dashboard() {
         <div>📊 Dashboard</div>
         <div>🚨 Incidents</div>
         <div>📈 Analytics</div>
+
+        <button
+          onClick={() => {
+            localStorage.removeItem("token");
+            window.location.reload();
+          }}
+        >
+          Logout
+        </button>
       </aside>
 
       <main style={main}>
         <h1>System Intelligence</h1>
 
-        {/* STATS */}
         <div style={{ display: "flex", gap: 20 }}>
           <div style={card}>
             <p>Active</p>
@@ -150,7 +196,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* TABLE */}
         <div style={card}>
           <h3>Incident Log</h3>
           {incidents.map((i) => (
@@ -160,7 +205,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* CHART */}
         <div style={card}>
           <h3>Stats</h3>
           <ResponsiveContainer width="100%" height={200}>
@@ -177,7 +221,6 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* ALERTS */}
         <div style={card}>
           <h3>Alerts</h3>
           <select onChange={(e) => setFilter(e.target.value)}>
@@ -218,4 +261,24 @@ const card = {
   padding: 20,
   marginTop: 20,
   borderRadius: 10,
+};
+
+const authStyles = {
+  container: {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "#020617",
+    color: "white",
+  },
+  card: {
+    background: "#111827",
+    padding: 30,
+    borderRadius: 10,
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    width: 300,
+  },
 };
